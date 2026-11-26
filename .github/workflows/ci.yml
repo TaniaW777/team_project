@@ -1,0 +1,74 @@
+# EventPass CI (Project Book P3): on every pull request, type-check and test
+# the API; format-check, analyze and test the app. No deployment.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only token: CI only checks out code.
+permissions:
+  contents: read
+
+# A newer push to the same branch / PR cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (typecheck + tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+
+      # The same Compose file as on laptops: only the in-memory `mongo-test`
+      # replica set (port 27028 on the runner), waited for until healthy.
+      - name: Start the test database
+        run: docker compose up -d --wait mongo-test
+
+      # Fake, test-only values (committed template; no secret involved).
+      - name: Test environment
+        run: cp .env.test.example .env.test
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Database logs (on failure)
+        if: failure()
+        run: docker compose logs mongo-test
+
+  app:
+    name: App (format + analyze + tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.0 # Dart 3.12 (pubspec: sdk ^3.12.0)
+          cache: true
+
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      # Unit and bloc tests. The app<->API contract tests in test/integration
+      # skip themselves without --dart-define=INTEGRATION_API_URL.
+      - run: flutter test

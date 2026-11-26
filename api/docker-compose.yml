@@ -1,0 +1,66 @@
+# EventPass local MongoDB: development + tests (ADR-033).
+# Guide: docs/development-database.md
+#
+#   npm run db:up       start both containers and wait until healthy
+#   npm run db:status   show their state
+#   npm run db:down     stop them (development data is KEPT)
+#
+# Two single-node replica sets (transactions need a replica set):
+#   mongo       development, 127.0.0.1:27027, persistent named volume
+#   mongo-test  tests,       127.0.0.1:27028, in-memory (tmpfs), test commands on
+# Ports are bound to 127.0.0.1 only: nobody else on the network can reach them.
+# Override the host ports with EVENTPASS_MONGO_PORT / EVENTPASS_MONGO_TEST_PORT.
+
+name: eventpass
+
+# Healthcheck shared by both containers. It runs INSIDE the container with the
+# image's own mongosh. Idempotent: the first run initiates the replica set,
+# later runs only check it. Healthy = a writable primary exists.
+x-mongo-healthcheck: &mongo-healthcheck
+  test:
+    - CMD
+    - mongosh
+    - --quiet
+    - --eval
+    - >-
+      try { rs.status() } catch (e) {
+      if (e.codeName !== 'NotYetInitialized') throw e;
+      rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] }) }
+      quit(db.hello().isWritablePrimary ? 0 : 1)
+  interval: 5s
+  timeout: 10s
+  retries: 30
+  start_period: 20s
+
+services:
+  mongo:
+    image: mongo:8.0
+    command: ["--replSet", "rs0", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.25"]
+    ports:
+      - "127.0.0.1:${EVENTPASS_MONGO_PORT:-27027}:27017"
+    volumes:
+      - eventpass-mongo-data:/data/db
+    healthcheck: *mongo-healthcheck
+    restart: unless-stopped
+
+  mongo-test:
+    image: mongo:8.0
+    command:
+      - --replSet
+      - rs0
+      - --bind_ip_all
+      - --wiredTigerCacheSizeGB
+      - "0.25"
+      # Test-only: allows failure injection (configureFailPoint). NEVER on the
+      # development container, NEVER on Atlas.
+      - --setParameter
+      - enableTestCommands=1
+    ports:
+      - "127.0.0.1:${EVENTPASS_MONGO_TEST_PORT:-27028}:27017"
+    tmpfs:
+      - /data/db
+    healthcheck: *mongo-healthcheck
+    restart: unless-stopped
+
+volumes:
+  eventpass-mongo-data:
