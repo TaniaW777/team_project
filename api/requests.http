@@ -1,0 +1,141 @@
+# EventPass API - manual requests (VS Code extension "REST Client").
+# Start the API first:  npm run dev
+# Requests for further modules (clubs...) are added with each module.
+
+@host = http://localhost:3000
+@base = {{host}}/api/v1
+
+### Health check (outside the versioned API)
+GET {{host}}/health
+
+### Unknown route: unified 404 error format
+GET {{base}}/nope
+
+### Malformed JSON: 400 BAD_REQUEST
+POST {{base}}/nope
+Content-Type: application/json
+
+{ "broken":
+
+### ---------------------------------------------------------------- Auth
+
+### Register (the "role" field is silently dropped)
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{ "name": "Ada Lovelace", "email": "ada@example.com", "password": "correct-horse-9", "role": "admin" }
+
+### Register again with the same e-mail: 409
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{ "name": "Ada Lovelace", "email": "ADA@example.com", "password": "correct-horse-9" }
+
+### Invalid registration: 422 with one message per field
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{ "name": "A", "email": "not-an-email", "password": "short" }
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ada@example.com", "password": "correct-horse-9" }
+
+### Wrong password: 401, same message as an unknown e-mail
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ada@example.com", "password": "wrong-password" }
+
+### Who am I?
+GET {{base}}/auth/me
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Who am I without a token: 401
+GET {{base}}/auth/me
+
+### Refresh (send it twice: the second time is "reuse" -> 401 and the session is revoked)
+# @name refreshed
+POST {{base}}/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{login.response.body.data.refreshToken}}" }
+
+### Logout (revokes the session of this refresh token; log in again first if it was revoked)
+POST {{base}}/auth/logout
+Content-Type: application/json
+
+{ "refreshToken": "{{refreshed.response.body.data.refreshToken}}" }
+
+### ---------------------------------------------------------------- Clubs
+# Prerequisites: an admin account. Register admin@example.com (below), then
+# in a terminal:  npm run promote-admin -- admin@example.com
+
+### Register the future admin
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{ "name": "Campus Admin", "email": "admin@example.com", "password": "correct-horse-9" }
+
+### Admin login
+# @name adminLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "admin@example.com", "password": "correct-horse-9" }
+
+### Create a club (admin only; a normal user gets 403)
+# @name club
+POST {{base}}/clubs
+Authorization: Bearer {{adminLogin.response.body.data.accessToken}}
+Content-Type: application/json
+
+{ "name": "Chess Club", "description": "Weekly games", "contactEmail": "chess@campus.edu" }
+
+### Appoint Ada as the first organizer (Ada must be registered, see Auth above)
+POST {{base}}/clubs/{{club.response.body.data.id}}/members
+Authorization: Bearer {{adminLogin.response.body.data.accessToken}}
+Content-Type: application/json
+
+{ "email": "ada@example.com", "role": "organizer" }
+
+### List clubs (search, my clubs) - myRole tells the caller's role
+GET {{base}}/clubs?q=chess&page=1&limit=20
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### My clubs
+GET {{base}}/clubs?mine=true
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### One club
+GET {{base}}/clubs/{{club.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Edit the club (organizer of THIS club or admin)
+PATCH {{base}}/clubs/{{club.response.body.data.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+Content-Type: application/json
+
+{ "description": "Weekly games and tournaments" }
+
+### Members (organizer or admin)
+GET {{base}}/clubs/{{club.response.body.data.id}}/members
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Ada tries to leave as the LAST organizer: 409 (also for an admin)
+DELETE {{base}}/clubs/{{club.response.body.data.id}}/members/{{login.response.body.data.user.id}}
+Authorization: Bearer {{login.response.body.data.accessToken}}
+
+### Archive the club (admin only; soft delete, 204)
+DELETE {{base}}/clubs/{{club.response.body.data.id}}
+Authorization: Bearer {{adminLogin.response.body.data.accessToken}}
+
+### Restore it (admin only)
+PATCH {{base}}/clubs/{{club.response.body.data.id}}
+Authorization: Bearer {{adminLogin.response.body.data.accessToken}}
+Content-Type: application/json
+
+{ "status": "active" }
