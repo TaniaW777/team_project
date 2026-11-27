@@ -139,3 +139,12 @@ Authorization: Bearer {{adminLogin.response.body.data.accessToken}}
 Content-Type: application/json
 
 { "status": "active" }
+
+### ------------------------------------------------- Event dashboard (Member 3)
+# Organizer of the event's club only: 403 for door staff, attendees and
+# admins without a membership. Paste the id of an event of Ada's club.
+@eventId = paste-an-event-id
+
+### Registrations and attendance of one event
+GET {{base}}/events/{{eventId}}/dashboard
+Authorization: Bearer {{login.response.body.data.accessToken}}
