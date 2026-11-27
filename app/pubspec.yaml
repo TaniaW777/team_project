@@ -18,7 +18,9 @@ dependencies:
   get_it: ^8.2.0 # single DI composition root (F4)
   go_router: ^16.2.0 # declarative navigation + route guard (F5)
   flutter_secure_storage: ^9.2.4 # tokens in Keystore / Keychain (F6)
-  shared_preferences: ^2.5.6 # device cache for the events list (F9)
+  shared_preferences: ^2.5.6 # device cache for the events list (F9) + QR outbox
+  mobile_scanner: ^5.2.3 # camera QR scanning (Member 4)
+  uuid: ^4.6.0 # UUID v4 idempotency keys, one per scan (Member 4)
 
 dev_dependencies:
   flutter_test:

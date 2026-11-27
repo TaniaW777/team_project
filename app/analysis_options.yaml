@@ -1,1 +1,13 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+  errors:
+    # Flutter 3.50 deprecated material.dart in favour of the new material_ui
+    # package, which is not available in this project's offline cache. The
+    # whole app (M1/M3/M4) still uses material.dart; keep the lint actionable
+    # only for real errors, not for this SDK-wide deprecation.
+    deprecated_member_use: ignore
 include: package:flutter_lints/flutter.yaml

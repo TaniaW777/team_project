@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- EventPass: release builds call the deployed API (F14). -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Member 4: the check-in scanner needs the camera. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="EventPass"
         android:name="${applicationName}"

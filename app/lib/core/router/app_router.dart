@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/check_in/presentation/bloc/check_in_bloc.dart';
+import '../../features/check_in/presentation/pages/check_in_scan_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/events/presentation/bloc/events_bloc.dart';
@@ -18,6 +20,7 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const register = '/register';
   static const home = '/home';
+  static const checkIn = '/check-in';
 }
 
 /// The route guard (F5): ONE pure function decides who can see what.
@@ -61,7 +64,17 @@ GoRouter createRouter(AuthBloc authBloc) {
         builder: (context, state) => BlocProvider(
           // Page-scoped bloc: created with the page, closed with it.
           create: (_) => sl<EventsBloc>()..add(const EventsStarted()),
-          child: const EventsListPage(),
+          child: EventsListPage(
+            onScanRequested: () => context.go(AppRoutes.checkIn),
+          ),
+        ),
+      ),
+      // Member 4: QR scanner + offline outbox, behind the SAME auth guard.
+      GoRoute(
+        path: AppRoutes.checkIn,
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<CheckInBloc>()..add(const CheckInStarted()),
+          child: const CheckInScanPage(),
         ),
       ),
     ],
