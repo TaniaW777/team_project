@@ -5,6 +5,7 @@ import { pinoHttp } from 'pino-http';
 import { env } from './config/env.ts';
 import { authRoutes } from './modules/auth/auth.routes.ts';
 import { clubRoutes } from './modules/clubs/club.routes.ts';
+import { dashboardRoutes } from './modules/dashboard/dashboard.routes.ts';
 import { eventRoutes } from './modules/events/event.routes.ts';
 import { ticketRoutes } from './modules/tickets/ticket.routes.ts';
 import { errorHandler, notFoundHandler } from './shared/error-handler.ts';
@@ -36,6 +37,9 @@ export function createApp() {
   // Feature routers, all under the versioned prefix (ADR-003).
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/clubs', clubRoutes);
+  // Before eventRoutes: otherwise the events router would authenticate the
+  // request first and the dashboard router would do it a second time.
+  app.use('/api/v1/events/:eventId/dashboard', dashboardRoutes);
   app.use('/api/v1/events', eventRoutes);
   app.use('/api/v1/tickets', ticketRoutes);
 

@@ -136,6 +136,13 @@ Every route requires a Bearer token.
 | GET | `/api/v1/tickets/me?page&limit&status` | attendee | 200 `{ data: [ticket], meta }` | 401, 422 |
 | GET | `/api/v1/tickets/:ticketId` | the attendee; organizer/staff of the club | 200 `{ data: ticket }` | 404 for anyone else |
 | DELETE | `/api/v1/tickets/:ticketId` | the attendee; organizer of the club | 204 (idempotent; promotes the first waitlisted) | 403 (staff), 404, 409 `TICKET_ALREADY_USED` |
+| GET | `/api/v1/events/:eventId/dashboard` | organizer of the event's club (not staff, no admin bypass) | 200 `{ data: dashboard }` | 401, 403, 404, 422 |
+
+`dashboard` (Member 3, `api/src/modules/dashboard`, one `$facet` aggregation
+on `tickets`) = `{ eventId, title, status, startsAt, capacity, confirmed,
+waitlisted, cancelled, checkedIn, seatsLeft, attendanceRate,
+registrationsPerDay: [{ date: 'YYYY-MM-DD' (UTC), count }] }`;
+`attendanceRate` = `checkedIn / confirmed`, `null` while nobody is confirmed.
 
 `event` = `{ id, clubId, title, description, location, startsAt, endsAt,
 capacity, confirmedCount, seatsLeft, status, createdAt }` (`capacity`/`seatsLeft`
