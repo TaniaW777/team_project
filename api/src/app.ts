@@ -4,6 +4,12 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.ts';
 import { authRoutes } from './modules/auth/auth.routes.ts';
+import {
+  bundleRoutes,
+  checkinRoutes,
+  syncRoutes,
+} from './modules/checkins/checkin.routes.ts';
+import { qrRoutes } from './modules/checkins/qr.routes.ts';
 import { clubRoutes } from './modules/clubs/club.routes.ts';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes.ts';
 import { eventRoutes } from './modules/events/event.routes.ts';
@@ -38,10 +44,16 @@ export function createApp() {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/clubs', clubRoutes);
   // Before eventRoutes: otherwise the events router would authenticate the
-  // request first and the dashboard router would do it a second time.
+  // request first and these routers would do it a second time.
+  app.use('/api/v1/events/:eventId/check-ins', checkinRoutes);
+  app.use('/api/v1/events/:eventId/check-in-bundle', bundleRoutes);
   app.use('/api/v1/events/:eventId/dashboard', dashboardRoutes);
   app.use('/api/v1/events', eventRoutes);
+  // QR before tickets: /tickets/me and /tickets/:ticketId must keep their
+  // behaviour while /tickets/:ticketId/qr gets its own router.
+  app.use('/api/v1/tickets', qrRoutes);
   app.use('/api/v1/tickets', ticketRoutes);
+  app.use('/api/v1/check-ins', syncRoutes);
 
   // --- Must be registered last ---
   app.use(notFoundHandler);

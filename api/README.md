@@ -17,6 +17,7 @@ npm install
 copy .env.example .env              # Linux/macOS: cp .env.example .env
 copy .env.test.example .env.test    # Linux/macOS: cp .env.test.example .env.test
 # set JWT_ACCESS_SECRET in .env (command in the file)
+# QR_SIGNING_PRIVATE_KEY has obvious development/test values in both templates
 npm run db:up                       # MongoDB dev (27027) + test (27028), waits until healthy
 npm run dev                         # http://localhost:3000/health
 ```
@@ -36,6 +37,9 @@ npm run dev                         # http://localhost:3000/health
 
 The tests only ever touch a database whose name ends with `_test` and refuse
 to run unless `NODE_ENV=test` ([ADR-009](../docs/decisions.md#adr-009-lab-modification-stricter-test-database-guard)).
+`test/qr-service.test.ts` and `test/checkin-service.test.ts` are pure unit
+tests: they can be run with `node --env-file=.env.test --test ...` without
+MongoDB (`npm test` still needs the `mongo-test` container for its other suites).
 
 ### Creating an admin
 
@@ -66,8 +70,10 @@ MongoDB is not a replica set with a writable primary ([ADR-029](../docs/decision
 | `JWT_ACCESS_SECRET` | **yes** | — | Signs access tokens; at least 32 characters. Empty in `.env.example`: generate your own (command in the file) |
 | `ACCESS_TOKEN_TTL` | no | `15m` | Access-token lifetime: a number followed by `s`, `m`, `h` or `d` |
 | `REFRESH_TOKEN_TTL_DAYS` | no | `30` | Refresh-token lifetime in days |
+| `QR_TTL_GRACE_SECONDS` | no | `43200` | QR validity after the event ends (12 h, TD7) |
 | `CORS_ORIGIN` | no | `*` | Allowed browser origin |
 | `TRUST_PROXY` | no | `0` | Reverse proxies in front of the API (`1` on most hosting platforms); keeps the login rate limit per client |
+| `QR_SIGNING_PRIVATE_KEY` | **yes** | — | PKCS8 PEM Ed25519 key for ticket QR codes, **separate from** `JWT_ACCESS_SECRET`; obvious dev/test keys in the templates, a platform secret in production |
 
 On a hosting platform there is no `.env` file: `npm start` reads `.env` only
 if it exists and otherwise uses the platform's variables. Deployment steps:
@@ -94,6 +100,11 @@ src/
                               refresh-token model
     clubs/                    club + membership models, schemas, services,
                               controllers, routes, club-transaction (transactions)
+    events/, tickets/         Member 2: events, seats and ticket lifecycle
+    dashboard/                Member 3: one-event attendance dashboard
+    checkins/                 Member 4: checkin model, QR service (EdDSA JWT),
+                              check-in service (transaction + sync), schemas,
+                              controllers and routes
 scripts/promote-admin.ts      admin promotion (guarded)
 test/                 tests (node:test + supertest)
 docker-compose.yml    MongoDB dev + test replica sets
@@ -125,6 +136,10 @@ codes, pagination): [docs/api-conventions.md](../docs/api-conventions.md).
 Events (`/api/v1/events`, registrations at `/api/v1/events/:eventId/registrations`)
 and tickets (`/api/v1/tickets/me`, `/api/v1/tickets/:ticketId`): full table in
 [docs/api-conventions.md](../docs/api-conventions.md#events-registrations-and-tickets).
+Check-in endpoints (`GET /api/v1/tickets/:ticketId/qr`,
+`POST|GET /api/v1/events/:eventId/check-ins`, `POST /api/v1/check-ins/sync`,
+`GET /api/v1/events/:eventId/check-in-bundle`) are documented in
+[docs/api-conventions.md](../docs/api-conventions.md#check-ins-qr-codes-and-offline-sync-member-4).
 
 `user` = `{ id, name, email, role, createdAt }`. Authentication:
 [docs/authentication.md](../docs/authentication.md). Clubs, memberships,

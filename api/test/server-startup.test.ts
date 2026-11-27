@@ -93,6 +93,17 @@ describe('server startup', () => {
     assert.match(result.stderr, /TRUST_PROXY/);
   });
 
+  it('refuses a QR signing key that is not PKCS8 Ed25519 (TD3)', async () => {
+    const result = await runServer({
+      NODE_ENV: 'production',
+      PORT: '3999',
+      QR_SIGNING_PRIVATE_KEY: 'not-a-pem-key',
+    });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /QR_SIGNING_PRIVATE_KEY/);
+    assert.doesNotMatch(result.stderr, /not-a-pem-key/);
+  });
+
   it('exits with code 1 and never listens when MongoDB cannot be reached (ADR-008)', async () => {
     const result = await runServer({
       NODE_ENV: 'production', // JSON logs, no pretty transport
