@@ -16,6 +16,7 @@ abstract interface class EventsRepository {
     required int page,
     String query = '',
     bool upcomingOnly = false,
+    String? clubId,
   });
 
   /// The list saved by [getEvents], or `null` if there is none (or it is

@@ -25,15 +25,17 @@ class EventsRepositoryImpl implements EventsRepository {
     required int page,
     String query = '',
     bool upcomingOnly = false,
+    String? clubId,
   }) {
     return guard<Paginated<CampusEvent>>(() async {
       final result = await _remote.fetchEvents(
         page: page,
         query: query,
         upcomingOnly: upcomingOnly,
+        clubId: clubId,
       );
       // Only the default list is cached: it is what the app shows at start.
-      if (page == 1 && query.isEmpty && !upcomingOnly) {
+      if (page == 1 && query.isEmpty && !upcomingOnly && clubId == null) {
         await _saveCache(result.items);
       }
       return result;

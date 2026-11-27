@@ -7,18 +7,17 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/clubs/presentation/cubit/club_cubit.dart';
+import '../../features/clubs/presentation/cubit/my_clubs_cubit.dart';
+import '../../features/clubs/presentation/pages/club_events_page.dart';
+import '../../features/clubs/presentation/pages/my_clubs_page.dart';
 import '../../features/events/presentation/bloc/events_bloc.dart';
 import '../../features/events/presentation/pages/events_list_page.dart';
 import '../di/injection.dart';
+import 'home_shell.dart';
+import 'routes.dart';
 
-/// Route paths. `/home` is the signed-in home: the events list (Member 3);
-/// tickets and dashboard routes are added next to it.
-abstract final class AppRoutes {
-  static const splash = '/splash';
-  static const login = '/login';
-  static const register = '/register';
-  static const home = '/home';
-}
+export 'routes.dart';
 
 /// The route guard (F5): ONE pure function decides who can see what.
 /// Pure so it can be unit-tested without widgets (test/core/router).
@@ -34,6 +33,16 @@ String? authRedirect(AuthState state, String location) {
   };
 }
 
+/// Map of the app:
+///
+///   /splash, /login, /register                     (signed out)
+///   HomeShell (bottom bar)
+///     /home     events list       (EventsBloc)
+///     /clubs    my clubs          (MyClubsCubit)
+///   pushed on top of the tabs
+///     /clubs/:clubId              club + its events  (ClubCubit, EventsBloc)
+///
+/// Every bloc/cubit is page-scoped: created by its route, closed with it.
 GoRouter createRouter(AuthBloc authBloc) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
@@ -55,14 +64,41 @@ GoRouter createRouter(AuthBloc authBloc) {
         path: AppRoutes.register,
         builder: (context, state) => const RegisterPage(),
       ),
-      // Signed-in home: the events list (replaces the lab placeholder).
+      ShellRoute(
+        builder: (context, state, child) =>
+            HomeShell(location: state.matchedLocation, child: child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (context, state) => BlocProvider(
+              create: (_) => sl<EventsBloc>()..add(const EventsStarted()),
+              child: const EventsListPage(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.clubs,
+            builder: (context, state) => BlocProvider(
+              create: (_) => sl<MyClubsCubit>()..load(),
+              child: const MyClubsPage(),
+            ),
+          ),
+        ],
+      ),
       GoRoute(
-        path: AppRoutes.home,
-        builder: (context, state) => BlocProvider(
-          // Page-scoped bloc: created with the page, closed with it.
-          create: (_) => sl<EventsBloc>()..add(const EventsStarted()),
-          child: const EventsListPage(),
-        ),
+        path: '/clubs/:clubId',
+        builder: (context, state) {
+          final clubId = state.pathParameters['clubId']!;
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider(create: (_) => sl<ClubCubit>()..load(clubId)),
+              BlocProvider(
+                create: (_) =>
+                    sl<EventsBloc>(param1: clubId)..add(const EventsStarted()),
+              ),
+            ],
+            child: ClubEventsPage(clubId: clubId),
+          );
+        },
       ),
     ],
   );

@@ -8,6 +8,12 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/auth_usecases.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/clubs/data/datasources/clubs_remote_data_source.dart';
+import '../../features/clubs/data/repositories/clubs_repository_impl.dart';
+import '../../features/clubs/domain/repositories/clubs_repository.dart';
+import '../../features/clubs/domain/usecases/clubs_usecases.dart';
+import '../../features/clubs/presentation/cubit/club_cubit.dart';
+import '../../features/clubs/presentation/cubit/my_clubs_cubit.dart';
 import '../../features/events/data/datasources/events_local_data_source.dart';
 import '../../features/events/data/datasources/events_remote_data_source.dart';
 import '../../features/events/data/repositories/events_repository_impl.dart';
@@ -65,6 +71,19 @@ void configureDependencies() {
   );
   sl.registerLazySingleton(() => GetEvents(sl()));
   sl.registerLazySingleton(() => GetCachedEvents(sl()));
-  // Factory: a new EventsBloc each time the screen opens (page-scoped).
-  sl.registerFactory(() => EventsBloc(getEvents: sl(), getCachedEvents: sl()));
+  // Factories: a new bloc/cubit each time a screen opens (page-scoped).
+  // param1 = optional club id: sl<EventsBloc>() for all events,
+  // sl<EventsBloc>(param1: clubId) for the events of one club.
+  sl.registerFactoryParam<EventsBloc, String?, void>(
+    (clubId, _) =>
+        EventsBloc(getEvents: sl(), getCachedEvents: sl(), clubId: clubId),
+  );
+
+  // ---- Clubs (read only; the clubs API is Member 1's) ----
+  sl.registerLazySingleton(() => ClubsRemoteDataSource(sl()));
+  sl.registerLazySingleton<ClubsRepository>(() => ClubsRepositoryImpl(sl()));
+  sl.registerLazySingleton(() => GetMyClubs(sl()));
+  sl.registerLazySingleton(() => GetClub(sl()));
+  sl.registerFactory(() => MyClubsCubit(sl()));
+  sl.registerFactory(() => ClubCubit(sl()));
 }
