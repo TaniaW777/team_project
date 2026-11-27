@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/events/presentation/bloc/events_bloc.dart';
+import '../../features/events/presentation/pages/events_list_page.dart';
+import '../di/injection.dart';
 
-/// Route paths shared with Member 3 (who replaces the /home placeholder by
-/// the real signed-in screens: events, tickets, dashboard).
+/// Route paths. `/home` is the signed-in home: the events list (Member 3);
+/// tickets and dashboard routes are added next to it.
 abstract final class AppRoutes {
   static const splash = '/splash';
   static const login = '/login';
@@ -52,42 +55,17 @@ GoRouter createRouter(AuthBloc authBloc) {
         path: AppRoutes.register,
         builder: (context, state) => const RegisterPage(),
       ),
-      // TEMPORARY placeholder (lab §3.10) until Member 3's signed-in screens.
+      // Signed-in home: the events list (replaces the lab placeholder).
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const _SignedInPlaceholder(),
+        builder: (context, state) => BlocProvider(
+          // Page-scoped bloc: created with the page, closed with it.
+          create: (_) => sl<EventsBloc>()..add(const EventsStarted()),
+          child: const EventsListPage(),
+        ),
       ),
     ],
   );
-}
-
-class _SignedInPlaceholder extends StatelessWidget {
-  const _SignedInPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final user = switch (context.watch<AuthBloc>().state) {
-      Authenticated(:final user) => user,
-      _ => null,
-    };
-    return Scaffold(
-      appBar: AppBar(title: const Text('EventPass')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Signed in as ${user?.name ?? ''}'),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () =>
-                  context.read<AuthBloc>().add(const AuthLogoutRequested()),
-              child: const Text('Sign out'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// Adapts a Stream (the bloc) to a Listenable (what go_router expects).

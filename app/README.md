@@ -56,12 +56,20 @@ lib/
     di/injection.dart       the single composition root (get_it)
     router/app_router.dart  go_router + authRedirect (route guard)
     app_bloc_observer.dart  logs bloc transitions (types only)
+    pagination/paginated.dart  one page of a list + hasMore (every list feature)
+    bloc/event_transformers.dart  debounceRestartable for search boxes (F8)
+    widgets/state_views.dart      shared loading / empty / error views (F7)
   features/
     auth/
       domain/   entities (User with role), repository contract, use cases
       data/     UserModel, AuthRemoteDataSource (Dio), AuthRepositoryImpl
       presentation/  AuthBloc (events, states), login and register pages
-test/                       bloc_test, repository, interceptor, error mapper, route guard
+    events/                 signed-in home: browse, search, filter (Member 3)
+      domain/   CampusEvent, EventsRepository contract, GetEvents / GetCachedEvents
+      data/     CampusEventModel, remote (GET /events) + local (device cache) sources
+      presentation/  EventsBloc (debounced search, droppable next page,
+                     cache then network), events list page, event card
+test/                       bloc_test, repository, widget, interceptor, error mapper, route guard
 ```
 
 ## Rules for every feature (Members 2, 3, 4)
