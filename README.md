@@ -40,6 +40,7 @@ App: see [app/README.md](app/README.md) (`flutter run --dart-define=API_BASE_URL
 - [Integration status and handover](docs/integration.md): what exists, owners, contracts, CI
 - [Ticket integration contract](docs/tickets-contract.md): tickets, waiting list, QR, check-in, offline sync (proposed)
 - [Deployment and release](docs/deployment.md): hosting, Atlas, secrets, APK
+- [App design (Member 3)](docs/member-3-ux-design.md): user journeys, navigation map, wireframes, blocs, accessibility
 - [Requirement traceability](docs/traceability.md)
 
 ## Links
