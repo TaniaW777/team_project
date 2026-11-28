@@ -14,11 +14,13 @@ class GetEvents {
     required int page,
     String query = '',
     bool upcomingOnly = false,
+    String? clubId,
   }) {
     return _repository.getEvents(
       page: page,
       query: query.trim(),
       upcomingOnly: upcomingOnly,
+      clubId: clubId,
     );
   }
 }
