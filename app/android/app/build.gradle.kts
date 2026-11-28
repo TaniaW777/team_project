@@ -19,7 +19,9 @@ android {
         applicationId = "edu.eventpass.eventpass"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // mobile_scanner 5.x requires API 21+ (CameraX); Flutter's default
+        // minSdkVersion already satisfies it, keep it explicit for the QR feature.
+        minSdk = maxOf(21, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

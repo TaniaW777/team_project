@@ -73,6 +73,14 @@ lib/
                      cache then network, optional club filter), events list
                      page, event card
     clubs/                  my clubs and my role in a club (read only)
+    check_in/               QR check-in + offline outbox (Member 4)
+      domain/   PendingCheckIn (UUID v4 idempotency key), CheckInResult,
+                CheckInRepository contract, one use case per action
+      data/     versioned SharedPreferencesAsync outbox (checkin.outbox.v1),
+                remote source (online scan, sync batches <= 100, bundle),
+                repository impl with §7 status mapping
+      presentation/  CheckInBloc (droppable capture, restartable sync),
+                     scanner page with manual token entry, status chips
 test/                       bloc_test, repository, widget, interceptor, error mapper, route guard
 ```
 
@@ -92,3 +100,46 @@ test/                       bloc_test, repository, widget, interceptor, error ma
   from the clubs API (`myRole`).
 - Error codes from the API: `docs/api-conventions.md`. A 409 `CONCURRENT_UPDATE`
   can be retried; a 503 `TRANSACTION_OUTCOME_UNKNOWN` means reload, then retry.
+  The error mapper keeps the API `code` and `details` (e.g. `checkedInAt`) in
+  `ApiFailure`; `failure.isRetryable` distinguishes terminal check-in errors
+  (`INVALID_QR`, `WRONG_EVENT`, `ALREADY_CHECKED_IN`, `TICKET_NOT_CONFIRMED`,
+  `IDEMPOTENCY_KEY_REUSED`) from retryable ones (network/5xx, `CONCURRENT_UPDATE`,
+  `TRANSACTION_OUTCOME_UNKNOWN`).
+
+## Check-in (Member 4)
+
+Route `/check-in` (`AppRoutes.checkIn`) is behind the same auth redirect as
+`/home`; the events list has a discreet "Scanner" shortcut. The page uses
+`mobile_scanner` for QR codes and also offers a manual QR-token field (useful
+for tests and devices without a camera).
+
+Each scan gets **one UUID v4 idempotency key** and is written to
+`checkin.outbox.v1` (SharedPreferencesAsync) **before** any request. The key is
+reused on every retry; the outbox is sorted by `scannedAt` for audit only — the
+server decides check-ins by arrival order. `syncOutbox()` sends at most 100
+items per batch and applies the contract mapping:
+
+| Server result / failure | Device state |
+|---|---|
+| `accepted`, `duplicate` | `synced` |
+| `already_checked_in` | `conflict` (shows the server `checkedInAt`) |
+| `rejected` + reason | `rejected` |
+| network, 5xx, 409 `CONCURRENT_UPDATE`, 503 `TRANSACTION_OUTCOME_UNKNOWN` | stays `pendingSync` |
+
+The QR is always **verified by the server**: `GET /events/:eventId/check-in-bundle`
+is only an optional, stale offline pre-check (no local signature validation,
+no `jose` dependency).
+
+### Camera permissions
+
+- Android: `android.permission.CAMERA` and an optional camera feature are
+  declared in `android/app/src/main/AndroidManifest.xml`. `minSdk` is at
+  least 21 (CameraX requirement).
+- iOS: `NSCameraUsageDescription` is set in `ios/Runner/Info.plist`.
+
+The check-in API contract test is skipped unless `INTEGRATION_API_URL` is set,
+like the auth/events ones:
+
+```powershell
+flutter test test/integration --dart-define=INTEGRATION_API_URL=http://127.0.0.1:3001/api/v1
+```

@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/check_in/presentation/bloc/check_in_bloc.dart';
+import '../../features/check_in/presentation/pages/check_in_scan_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/clubs/presentation/cubit/club_cubit.dart';
@@ -72,7 +74,10 @@ GoRouter createRouter(AuthBloc authBloc) {
             path: AppRoutes.home,
             builder: (context, state) => BlocProvider(
               create: (_) => sl<EventsBloc>()..add(const EventsStarted()),
-              child: const EventsListPage(),
+              child: EventsListPage(
+                // Pushed above the tabs, so the scanner has a back button.
+                onScanRequested: () => context.push(AppRoutes.checkIn),
+              ),
             ),
           ),
           GoRoute(
@@ -83,6 +88,14 @@ GoRouter createRouter(AuthBloc authBloc) {
             ),
           ),
         ],
+      ),
+      // Member 4: QR scanner + offline outbox, behind the SAME auth guard.
+      GoRoute(
+        path: AppRoutes.checkIn,
+        builder: (context, state) => BlocProvider(
+          create: (_) => sl<CheckInBloc>()..add(const CheckInStarted()),
+          child: const CheckInScanPage(),
+        ),
       ),
       GoRoute(
         path: '/clubs/:clubId',

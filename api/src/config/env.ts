@@ -1,3 +1,4 @@
+import { createPrivateKey } from 'node:crypto';
 import { z } from 'zod';
 
 // Lab reference: section 1.2 (src/config/env.ts).
@@ -24,7 +25,29 @@ const envSchema = z.object({
   // hosting platform's load balancer = 1). 0 = trust none (local default).
   // Needed so req.ip, and therefore the login rate limit, is per client.
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+  // QR signing key (ADR-037 TD3): PKCS8 PEM, Ed25519, SEPARATE from the
+  // access-token secret. Env files use literal \n; expand them here. The
+  // templates contain obvious development/test keys, never a production one.
+  QR_SIGNING_PRIVATE_KEY: z
+    .string()
+    .transform((value) => value.replace(/\\n/g, '\n').trim())
+    .pipe(
+      z.string().refine(isEd25519Pkcs8, {
+        message: 'Expected a PKCS8 PEM Ed25519 private key',
+      }),
+    ),
+  // TD7: a QR stays valid for this long after the event ends (12 h default).
+  QR_TTL_GRACE_SECONDS: z.coerce.number().int().nonnegative().default(43_200),
 });
+
+function isEd25519Pkcs8(value: string): boolean {
+  if (!value.startsWith('-----BEGIN PRIVATE KEY-----')) return false;
+  try {
+    return createPrivateKey(value).asymmetricKeyType === 'ed25519';
+  } catch {
+    return false;
+  }
+}
 
 const parsed = envSchema.safeParse(process.env);
 

@@ -9,7 +9,11 @@ import '../widgets/events_list_body.dart';
 /// The page only reports what the user does to the [EventsBloc] and draws
 /// its state; it never calls the API (F2).
 class EventsListPage extends StatefulWidget {
-  const EventsListPage({super.key});
+  const EventsListPage({super.key, this.onScanRequested});
+
+  /// Optional entry point to the check-in scanner (Member 4); the router
+  /// supplies it so this feature stays independent of go_router.
+  final VoidCallback? onScanRequested;
 
   @override
   State<EventsListPage> createState() => _EventsListPageState();
@@ -30,6 +34,11 @@ class _EventsListPageState extends State<EventsListPage> {
       appBar: AppBar(
         title: const Text('Events'),
         actions: [
+          IconButton(
+            tooltip: 'Scanner',
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: widget.onScanRequested,
+          ),
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),

@@ -8,6 +8,12 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/auth_usecases.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/check_in/data/datasources/check_in_local_data_source.dart';
+import '../../features/check_in/data/datasources/check_in_remote_data_source.dart';
+import '../../features/check_in/data/repositories/check_in_repository_impl.dart';
+import '../../features/check_in/domain/repositories/check_in_repository.dart';
+import '../../features/check_in/domain/usecases/check_in_usecases.dart';
+import '../../features/check_in/presentation/bloc/check_in_bloc.dart';
 import '../../features/clubs/data/datasources/clubs_remote_data_source.dart';
 import '../../features/clubs/data/repositories/clubs_repository_impl.dart';
 import '../../features/clubs/domain/repositories/clubs_repository.dart';
@@ -86,4 +92,27 @@ void configureDependencies() {
   sl.registerLazySingleton(() => GetClub(sl()));
   sl.registerFactory(() => MyClubsCubit(sl()));
   sl.registerFactory(() => ClubCubit(sl()));
+
+  // ---- Check-in feature (Member 4) ----
+  // Reuses the shared Dio (Bearer token / silent refresh) and the same
+  // SharedPreferencesAsync instance registered by the events feature.
+  sl.registerLazySingleton(() => CheckInRemoteDataSource(sl<Dio>()));
+  sl.registerLazySingleton(
+    () => CheckInLocalDataSource(sl<SharedPreferencesAsync>()),
+  );
+  sl.registerLazySingleton<CheckInRepository>(
+    () => CheckInRepositoryImpl(remote: sl(), local: sl()),
+  );
+  sl.registerLazySingleton(() => EnqueueCheckIn(sl()));
+  sl.registerLazySingleton(() => SyncCheckInOutbox(sl()));
+  sl.registerLazySingleton(() => WatchCheckInOutbox(sl()));
+  sl.registerLazySingleton(() => ClearSyncedCheckIns(sl()));
+  // Factory: a new CheckInBloc each time the scanner screen opens.
+  sl.registerFactory(
+    () => CheckInBloc(
+      enqueueCheckIn: sl(),
+      syncCheckInOutbox: sl(),
+      watchCheckInOutbox: sl(),
+    ),
+  );
 }

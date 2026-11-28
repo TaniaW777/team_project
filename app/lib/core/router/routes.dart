@@ -12,4 +12,7 @@ abstract final class AppRoutes {
 
   // Pages opened on top of the tabs.
   static String club(String clubId) => '/clubs/$clubId';
+
+  /// Member 4: QR scanner and offline check-in outbox.
+  static const checkIn = '/check-in';
 }
