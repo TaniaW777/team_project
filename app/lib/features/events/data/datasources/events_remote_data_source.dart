@@ -19,6 +19,7 @@ class EventsRemoteDataSource {
     required int page,
     String query = '',
     bool upcomingOnly = false,
+    String? clubId,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/events',
@@ -28,6 +29,7 @@ class EventsRemoteDataSource {
         if (query.isNotEmpty) 'q': query,
         // `from`: events starting at or after this instant (listEventsSchema).
         if (upcomingOnly) 'from': _now().toUtc().toIso8601String(),
+        'clubId': ?clubId,
       },
     );
     final body = response.data!;

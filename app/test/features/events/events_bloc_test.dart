@@ -287,6 +287,31 @@ void main() {
     ],
   );
 
+  group('club page (EventsBloc with a clubId)', () {
+    blocTest<EventsBloc, EventsState>(
+      'only the club events are requested, and the device cache is not used',
+      setUp: () => when(
+        () => repository.getEvents(
+          page: 1,
+          query: '',
+          upcomingOnly: false,
+          clubId: 'club-1',
+        ),
+      ).thenAnswer((_) async => Ok(pageOf([a]))),
+      build: () => EventsBloc(
+        getEvents: GetEvents(repository),
+        getCachedEvents: GetCachedEvents(repository),
+        clubId: 'club-1',
+      ),
+      act: (bloc) => bloc.add(const EventsStarted()),
+      expect: () => [
+        const EventsState(status: EventsStatus.loading),
+        EventsState(status: EventsStatus.success, events: [a], page: 1),
+      ],
+      verify: (_) => verifyNever(() => repository.getCachedEvents()),
+    );
+  });
+
   group('EventsNextPageRequested (droppable, F8)', () {
     final firstPage = EventsState(
       status: EventsStatus.success,

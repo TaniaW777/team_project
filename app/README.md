@@ -54,7 +54,9 @@ lib/
     network/                Dio client, AuthInterceptor (silent, queued refresh), error mapper
     storage/                TokenStorage contract + secure storage implementation
     di/injection.dart       the single composition root (get_it)
-    router/app_router.dart  go_router + authRedirect (route guard)
+    router/app_router.dart  go_router + authRedirect (route guard); map of all routes
+    router/routes.dart      every path (features import this, not the router)
+    router/home_shell.dart  bottom navigation bar: Events, My clubs
     app_bloc_observer.dart  logs bloc transitions (types only)
     pagination/paginated.dart  one page of a list + hasMore (every list feature)
     bloc/event_transformers.dart  debounceRestartable for search boxes (F8)
@@ -68,7 +70,9 @@ lib/
       domain/   CampusEvent, EventsRepository contract, GetEvents / GetCachedEvents
       data/     CampusEventModel, remote (GET /events) + local (device cache) sources
       presentation/  EventsBloc (debounced search, droppable next page,
-                     cache then network), events list page, event card
+                     cache then network, optional club filter), events list
+                     page, event card
+    clubs/                  my clubs and my role in a club (read only)
     check_in/               QR check-in + offline outbox (Member 4)
       domain/   PendingCheckIn (UUID v4 idempotency key), CheckInResult,
                 CheckInRepository contract, one use case per action

@@ -18,6 +18,7 @@ class EventsBloc extends Bloc<EventsEvent, EventsState> {
   EventsBloc({
     required this._getEvents,
     required this._getCachedEvents,
+    this.clubId,
     Duration searchDebounce = const Duration(milliseconds: 400),
   }) : super(const EventsState()) {
     // Deliberate transformers (F8):
@@ -40,6 +41,10 @@ class EventsBloc extends Bloc<EventsEvent, EventsState> {
   final GetEvents _getEvents;
   final GetCachedEvents _getCachedEvents;
 
+  /// When set, the list shows the events of this club only (club page).
+  /// The device cache is used for the general list only.
+  final String? clubId;
+
   /// Incremented every time the list is replaced (start, refresh, search,
   /// filter). A request remembers the version it started with; if the version
   /// changed when its answer arrives, the answer belongs to an older list and
@@ -55,7 +60,7 @@ class EventsBloc extends Bloc<EventsEvent, EventsState> {
     emit(state.copyWith(status: EventsStatus.loading, clearFailure: true));
 
     // 1. Cache: the last list saved on the device, shown immediately.
-    if (!state.isFiltered) {
+    if (!state.isFiltered && clubId == null) {
       final cached = await _getCachedEvents();
       if (version != _version) return;
       if (cached != null && cached.events.isNotEmpty) {
@@ -120,6 +125,7 @@ class EventsBloc extends Bloc<EventsEvent, EventsState> {
       page: state.page + 1,
       query: state.query,
       upcomingOnly: state.upcomingOnly,
+      clubId: clubId,
     );
     if (version != _version) return; // the list was replaced meanwhile
 
@@ -161,6 +167,7 @@ class EventsBloc extends Bloc<EventsEvent, EventsState> {
       page: 1,
       query: state.query,
       upcomingOnly: state.upcomingOnly,
+      clubId: clubId,
     );
     if (version != _version) return;
 
